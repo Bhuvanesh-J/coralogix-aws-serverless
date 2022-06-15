@@ -1,12 +1,13 @@
+import concurrent.futures
 import time
+
 import boto3
 import interfaces
-import json
 
 
 class Tester(interfaces.TesterInterface):
-    def __init__(self):
-        self.aws_cloudfront_client = boto3.client('cloudfront')
+    def __init__(self, region_name):
+        self.aws_cloudfront_client = boto3.client('cloudfront', region_name=region_name)
         self.cache = {}
         self.user_id = boto3.client('sts').get_caller_identity().get('UserId')
         self.account_arn = boto3.client('sts').get_caller_identity().get('Arn')
@@ -20,11 +21,18 @@ class Tester(interfaces.TesterInterface):
         return 'aws'
 
     def run_tests(self) -> list:
-        return self.detect_waf_enabled_disabled_distribution() + \
-               self.detect_unencrypted_cloudfront_to_origin_server_connection() + \
-               self.detect_encrypted_data_in_transit_using_tls_higher_version() + \
-               self.detect_unencrypted_cloudfront_to_viewer_connection() + \
-               self.detect_cloudfront_enable_origin_access_identity_for_cloudfront_distributions_with_s3_origin()
+        executor_list = []
+        return_value = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor_list.append(executor.submit(self.detect_waf_enabled_disabled_distribution))
+            executor_list.append(executor.submit(self.detect_unencrypted_cloudfront_to_origin_server_connection))
+            executor_list.append(executor.submit(self.detect_encrypted_data_in_transit_using_tls_higher_version))
+            executor_list.append(executor.submit(self.detect_unencrypted_cloudfront_to_viewer_connection))
+            executor_list.append(executor.submit(
+                self.detect_cloudfront_enable_origin_access_identity_for_cloudfront_distributions_with_s3_origin))
+            for future in executor_list:
+                return_value += future.result()
+        return return_value
 
     def _list_all_cloud_front(self):
         cloud_front_details = []
