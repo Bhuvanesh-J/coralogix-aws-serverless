@@ -2,15 +2,15 @@ import time
 import boto3
 import interfaces
 import json
-
+import concurrent.futures
 
 def _format_string_to_json(text):
     return json.loads(text)
 
 
 class Tester(interfaces.TesterInterface):
-    def __init__(self):
-        self.aws_vpc_client = boto3.client('ec2')
+    def __init__(self, region_name):
+        self.aws_vpc_client = boto3.client('ec2', region_name=region_name)
         self.cache = {}
         self.user_id = boto3.client('sts').get_caller_identity().get('UserId')
         self.account_arn = boto3.client('sts').get_caller_identity().get('Arn')
@@ -45,36 +45,42 @@ class Tester(interfaces.TesterInterface):
         return 'aws'
 
     def run_tests(self) -> list:
-        return self.detect_vpc_logging_status() + \
-               self.detect_vpc_endpoint_publicly_accessibility() + \
-               self.detect_network_acl_restriction_status() + \
-               self.detect_vpc_network_acl_inbound_and_outbound_traffic_rules() + \
-               self.detect_default_nacl_used() + \
-               self.detect_vpc_dnc_resolution_enabled() + \
-               self.detect_vpc_unrestricted_icmp_access() + \
-               self.detect_securitygroup_inbound_rule_without_specified_protocol() + \
-               self.detect_public_and_not_encrypted_ami_images() + \
-               self.detect_vpc_peering_connection() + \
-               self.detect_unrestricted_ssh_access() + \
-               self.detect_vpc_unrestricted_smb_access() + \
-               self.detect_vpc_unrestricted_dns_tcp_access() + \
-               self.detect_vpc_unrestricted_vnc_server_access() + \
-               self.detect_vpc_unrestricted_dns_udp_access() + \
-               self.detect_vpc_unrestricted_ftp_access() + \
-               self.detect_vpc_unrestricted_cifs_access() + \
-               self.detect_vpc_default_security_groups_in_use() + \
-               self.detect_vpc_unrestricted_telnet_access() + \
-               self.detect_vpc_unrestricted_rdp_access() + \
-               self.detect_vpc_unrestricted_ftp_data_access() + \
-               self.detect_vpc_unrestricted_smtp_access() + \
-               self.detect_vpc_unrestricted_sql_server_tcp_access() + \
-               self.detect_vpc_unrestricted_sql_server_udp_access() + \
-               self.detect_vpc_unrestricted_net_bios_access() + \
-               self.detect_vpc_unrestricted_mysql_access() + \
-               self.detect_vpc_unrestricted_postgre_sql_access() + \
-               self.detect_vpc_unrestricted_vnc_listener_access() + \
-               self.detect_vpc_eip_in_use() + \
-               self.detect_vpc_security_group_per_vpc_limit()
+        executor_list = []
+        return_value = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor_list.append(executor.submit(self.detect_vpc_logging_status))
+            executor_list.append(executor.submit(self.detect_vpc_endpoint_publicly_accessibility))
+            executor_list.append(executor.submit(self.detect_network_acl_restriction_status))
+            executor_list.append(executor.submit(self.detect_vpc_network_acl_inbound_and_outbound_traffic_rules))
+            executor_list.append(executor.submit(self.detect_default_nacl_used))
+            executor_list.append(executor.submit(self.detect_vpc_dnc_resolution_enabled))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_icmp_access))
+            executor_list.append(executor.submit(self.detect_securitygroup_inbound_rule_without_specified_protocol))
+            executor_list.append(executor.submit(self.detect_public_and_not_encrypted_ami_images))
+            executor_list.append(executor.submit(self.detect_vpc_peering_connection))
+            executor_list.append(executor.submit(self.detect_unrestricted_ssh_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_smb_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_dns_tcp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_vnc_server_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_dns_udp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_ftp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_cifs_access))
+            executor_list.append(executor.submit(self.detect_vpc_default_security_groups_in_use))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_telnet_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_rdp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_ftp_data_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_smtp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_sql_server_tcp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_sql_server_udp_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_net_bios_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_mysql_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_postgre_sql_access))
+            executor_list.append(executor.submit(self.detect_vpc_unrestricted_vnc_listener_access))
+            executor_list.append(executor.submit(self.detect_vpc_eip_in_use))
+            executor_list.append(executor.submit(self.detect_vpc_security_group_per_vpc_limit))
+            for future in executor_list:
+                return_value += future.result()
+        return return_value
 
     def _append_vpc_test_result(self, vpc_detail, test_name, issue_status):
         return {
