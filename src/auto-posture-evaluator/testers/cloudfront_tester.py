@@ -22,8 +22,9 @@ class Tester(interfaces.TesterInterface):
         return 'aws'
 
     def run_tests(self) -> list:
-        if self.region_name != 'global':
-            return []
+        super().__init__(self.region_name, is_global=True)
+        if not super().run_tests:
+            return None
         self.all_cloud_front_details = self._list_all_cloud_front()
         executor_list = []
         return_values = []
