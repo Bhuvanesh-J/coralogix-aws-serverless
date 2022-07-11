@@ -103,7 +103,8 @@ class Tester(interfaces.TesterInterface):
                 ingress_firewall_li.append(firewall_dict)
         return ingress_firewall_li
 
-    def _find_firewall_vulnerability(self, ingress_firewall_li, anywhere_ip, ports_li, protocol, test_name) -> List[Dict]:
+    def _find_firewall_vulnerability(self, ingress_firewall_li, anywhere_ip, ports_li, protocol, test_name) -> List[
+        Dict]:
         result = []
         for firewall_dict in ingress_firewall_li:
             issue_found = False
@@ -113,7 +114,7 @@ class Tester(interfaces.TesterInterface):
                     for port_and_protocol_detail in firewall_dict['allowed']:
                         for port in ports_li:
                             if (port_and_protocol_detail['IPProtocol'].lower() == 'all') or (
-                                    port_and_protocol_detail['IPProtocol'].lower() in [protocol] and (
+                                    port_and_protocol_detail['IPProtocol'].lower() in protocol and (
                                     'ports' not in port_and_protocol_detail or port in port_and_protocol_detail[
                                 'ports'])):
                                 issue_found = True
@@ -133,14 +134,14 @@ class Tester(interfaces.TesterInterface):
         test_name = 'gcp_vpc_firewall_should_restrict_postgresql_access'
         anywhere_ip = ["::/0", "0.0.0.0/0"]
         rds_psql_port = ["5432", "5431"]
-        protocol = 'tcp'
+        protocol = ['tcp']
         return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, rds_psql_port, protocol, test_name)
 
     def detect_gcp_vpc_firewall_should_restrict_ftp_access(self, ingress_firewall_li):
         test_name = 'gcp_vpc_firewall_should_restrict_ftp_access'
         anywhere_ip = ["::/0", "0.0.0.0/0"]
         rds_psql_port = ["20", "21"]
-        protocol = 'tcp'
+        protocol = ['tcp']
         return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, rds_psql_port, protocol, test_name)
 
     def detect_gcp_vpc_firewall_should_restrict_access_over_uncommon_ports(self, ingress_firewall_li):
@@ -188,4 +189,97 @@ class Tester(interfaces.TesterInterface):
                     "issue_found"))
 
         return result
+
+    def detect_gcp_security_vpc_firewall_should_restrict_dns_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_dns_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        dns_port = ["53"]
+        protocol = ['tcp', 'udp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, dns_port, protocol, test_name)
+
+    def detect_gcp_security_vpc_firewall_should_restrict_netbios_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_netbios_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        netbios_port = ["137", "139"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, netbios_port, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_vnc_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_vnc_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["5500", "5900"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_mssql_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_mssql_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["1433", "1434"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_mysql_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_mysql_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["3306"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_oracle_database_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_oracle_database_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["1521"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gpc_vpc_security_firewall_should_restrict_icmp_access(self, ingress_firewall_li):
+        test_name = 'gpc_vpc_security_firewall_should_restrict_icmp_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        protocol = ['tcp']
+        result = []
+        for firewall_dict in ingress_firewall_li:
+            issue_found = False
+            if 'sourceRanges' in firewall_dict and firewall_dict['sourceRanges'] and 'allowed' in firewall_dict:
+                ip_exits = any(ip in anywhere_ip for ip in firewall_dict['sourceRanges'])
+                if ip_exits:
+                    for port_and_protocol_detail in firewall_dict['allowed']:
+                        if (port_and_protocol_detail['IPProtocol'].lower() == 'all') or (
+                                port_and_protocol_detail['IPProtocol'].lower() in protocol):
+                            issue_found = True
+            if issue_found:
+                result.append(self._append_gcp_vpc_test_result(
+                    firewall_dict['network'].split('/')[-1] + "@@" + firewall_dict['name'], test_name, "issue_found"))
+            else:
+                result.append(self._append_gcp_vpc_test_result(
+                    firewall_dict['network'].split('/')[-1] + "@@" + firewall_dict['name'], test_name,
+                    "no_issue_found"))
+        return result
+
+    def detect_gcp_vpc_security_firewall_should_restrict_http_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_http_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["80"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_https_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_https_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["443"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gcp_vpc_security_firewall_should_restrict_cifs_access(self, ingress_firewall_li):
+        test_name = 'gcp_vpc_security_firewall_should_restrict_cifs_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["445"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
+
+    def detect_gpc_vpc_security_firewall_should_restrict_smtp_access(self, ingress_firewall_li):
+        test_name = 'gpc_vpc_security_firewall_should_restrict_smtp_access'
+        anywhere_ip = ["::/0", "0.0.0.0/0"]
+        port_li = ["25"]
+        protocol = ['tcp']
+        return self._find_firewall_vulnerability(ingress_firewall_li, anywhere_ip, port_li, protocol, test_name)
 
